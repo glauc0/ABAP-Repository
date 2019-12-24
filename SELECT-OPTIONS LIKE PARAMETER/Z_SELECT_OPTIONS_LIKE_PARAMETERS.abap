@@ -70,9 +70,9 @@ INITIALIZATION.
                opt_list-options-ge,
                opt_list-options-gt,
                opt_list-options-le,
-               opt_list-options-lt.
-*               opt_list-options-ne,
-*               opt_list-options-np.
+               opt_list-options-lt,
+               opt_list-options-ne,
+               opt_list-options-np.
   APPEND opt_list TO restrict-opt_list_tab.
 
 * EQ_AND_CP: only EQ and CP allowed
