@@ -17,11 +17,11 @@ TYPES: BEGIN OF lty_employee,
                                                                            node_key.
 
 DATA: gv_con_name TYPE dbcon-con_name,
-      gv_nome TYPE snwd_employee-first_name,
+      gv_nome TYPE snwd_employees-first_name,
       lt_employees TYPE lty_t_emplyee.
 
 SELECT-OPTIONS:
-  s_nome FOR gv_nome NO INTERVALS NO-EXTENSION LOWER CASE,
+  s_nome FOR gv_nome MATCHCODE OBJECT zt58_43_employee NO INTERVALS NO-EXTENSION LOWER CASE,
   s_con FOR gv_con_name DEFAULT 'LCA' NO INTERVALS NO-EXTENSION
   .
 
