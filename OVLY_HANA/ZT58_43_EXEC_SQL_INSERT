@@ -9,35 +9,36 @@ PARAMETERS p_nome TYPE snwd_company-company_name.
 
 TRY .
 
-EXEC SQL.
-    connection 'banco'
-ENDEXEC.
+*  EXEC SQL.
+*    CONNECT TO 'DB_FABIO'
+*  ENDEXEC.
 
-EXEC SQL.
-   insert into "SAPHANADB"."SNWD_COMPANY"
-    (
-      "CLIENT",
-      "NODE_KEY",
-      "COMPANY_NAME"
-    )
-    values
-    (
-      :sy-mandt,
-      SYSUUID,
-      :p_nome
-    )
-ENDEXEC.
+  EXEC SQL.
+
+     INSERT INTO SAPHANADB.SNWD_COMPANY
+      (
+        CLIENT,
+        NODE_KEY,
+        COMPANY_NAME
+      )
+      VALUES
+      (
+        :sy-mandt,
+        SYSUUID,
+        :p_nome
+      )
+
+
+  ENDEXEC.
 
   IF sy-subrc IS INITIAL.
-
     WRITE 'OK'.
-
   ENDIF.
 
+*  EXEC SQL.
+*    DISCONNECT 'DB_FABIO'
+*  ENDEXEC.
 
-EXEC SQL.
-    desconnection 'banco'
-ENDEXEC.
 CATCH cx_root INTO DATA(lr_root).
   cl_demo_output=>display_text( text = lr_root->get_text( ) ).
   STOP.
