@@ -1,3 +1,7 @@
+SELECT matnr as key
+  INTO TABLE @DATA(lt_table_main)
+  FROM mara UP TO 4 ROWS.
+  
 DATA(lv_loop) = abap_true.
 DATA(lv_count) = 0.
 DATA(lv_limit) = 15000.
@@ -5,6 +9,7 @@ DATA(lt_aux) = lt_table.
 DATA lrg_aux TYPE RANGE OF data_element_range,
      lsg_aux LIKE LINE OF lrg_aux.
 
+DATA(lt_aux) = lt_table_main.
 SORT: lt_aux BY key.
 DELETE ADJACENT DUPLICATES FROM lt_aux COMPARING key.
 
