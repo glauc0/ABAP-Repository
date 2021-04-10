@@ -10,8 +10,8 @@ DATA(lt_aux) = lt_table_main.
 SORT: lt_aux BY key.
 DELETE ADJACENT DUPLICATES FROM lt_aux COMPARING key.
 
-DATA lrg_aux TYPE RANGE OF data_element_range,
-    lsg_aux LIKE LINE OF lrg_aux.
+DATA: lrg_aux TYPE RANGE OF data_element_range,
+      lsg_aux LIKE LINE OF lrg_aux.
 
 WHILE lv_loop EQ abap_true.
     
@@ -21,7 +21,7 @@ WHILE lv_loop EQ abap_true.
         
         lsg_aux-sign = 'I'.
         lsg_aux-option = 'EQ'.
-        lsg_aux-low = lst_aux-field.
+        lsg_aux-low = lst_aux-key.
         
         APPEND lsg_aux TO lrg_aux.
         CLEAR: lsg_aux.
