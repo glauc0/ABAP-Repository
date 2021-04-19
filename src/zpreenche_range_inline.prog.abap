@@ -4,6 +4,7 @@
 *&
 *&---------------------------------------------------------------------*
 REPORT zpreenche_range_inline.
+
 SELECT product_id AS key
   INTO TABLE @DATA(lt_table_main)
   FROM snwd_pd UP TO 4 ROWS.
