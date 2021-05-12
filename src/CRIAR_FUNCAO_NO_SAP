@@ -1,0 +1,31 @@
+FUNCTION zfmsd_split_string.
+*"----------------------------------------------------------------------
+*"*"Interface local:
+*"  IMPORTING
+*"     REFERENCE(I_STR) TYPE  STRING
+*"  EXPORTING
+*"     REFERENCE(ET_STR) TYPE  TCHAR255
+*"----------------------------------------------------------------------
+
+  DATA: lv_len   TYPE i, "String Length
+        lv_rmd   TYPE i, "Remainder of String Length / 255
+        lv_pos   TYPE i, "String position
+        lv_fct   TYPE i, "Integer: Roundown(String Length/255)
+        lv_pfct  TYPE p  LENGTH 4 DECIMALS 2. "---get length of input string
+
+  lv_len =  STRLEN( i_str )."---split string into itab of field length 255 char
+
+  IF lv_len < 255.
+    APPEND i_str TO et_str.
+  ELSE.
+    lv_rmd   = lv_len MOD 255.
+    lv_pfct  = FLOOR( lv_len / 255 ).
+    lv_fct   = lv_pfct.
+    DO lv_fct  TIMES.
+      APPEND i_str+lv_pos(255) TO et_str.
+      lv_pos = lv_pos + 255.
+    ENDDO.
+    "Append string remainder
+    APPEND i_str+lv_pos(lv_rmd) TO et_str.
+  ENDIF.
+ENDFUNCTION.
