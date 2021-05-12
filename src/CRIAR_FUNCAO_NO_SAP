@@ -6,7 +6,7 @@ FUNCTION zfmsd_split_string.
 *"  EXPORTING
 *"     REFERENCE(ET_STR) TYPE  TCHAR255
 *"----------------------------------------------------------------------
-
+https://blogs.sap.com/2013/07/09/overcome-smartforms-text-limitation-of-255-characters/
   DATA: lv_len   TYPE i, "String Length
         lv_rmd   TYPE i, "Remainder of String Length / 255
         lv_pos   TYPE i, "String position
