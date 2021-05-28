@@ -1,0 +1,158 @@
+FUNCTION zbrmm_get_taxitem.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_EBELN) TYPE  EBELN
+*"  EXPORTING
+*"     VALUE(TKOMV) TYPE  KOMV_TAB
+*"----------------------------------------------------------------------
+  TABLES : ekko , ekpo , t001 , komk , komp.
+
+  CONSTANTS: bstyp-info VALUE 'I',
+             bstyp-ordr VALUE 'W',
+             bstyp-banf VALUE 'B',
+             bstyp-best VALUE 'F',
+             bstyp-anfr VALUE 'A',
+             bstyp-kont VALUE 'K',
+             bstyp-lfpl VALUE 'L',
+             bstyp-lerf VALUE 'Q'.
+
+  DATA : my_taxcom TYPE taxcom,
+         t_konv    TYPE TABLE OF komv WITH HEADER LINE.
+
+  DATA: BEGIN OF tkomvd OCCURS 50. "Belegkonditionen
+          INCLUDE STRUCTURE komvd.
+        DATA: END OF tkomvd.
+
+  DATA : BEGIN OF tkomvh OCCURS 50.
+           INCLUDE STRUCTURE komv.
+           DATA : vtext LIKE t685t-vtext.
+  DATA : END OF tkomvh.
+
+  SELECT SINGLE *
+  INTO ekko
+  FROM ekko
+  WHERE ebeln = i_ebeln .
+
+  SELECT SINGLE *
+  INTO ekpo
+  FROM ekpo
+  WHERE ebeln = i_ebeln.
+  "AND ebelp = p_ebelp .
+
+  SELECT SINGLE *
+  INTO t001
+  FROM t001
+  WHERE bukrs = ekko-bukrs .
+
+
+  SELECT *
+    FROM konv
+    INTO TABLE tkomv
+  WHERE knumv EQ ekko-knumv.
+
+
+  my_taxcom-bukrs = ekko-bukrs.
+  my_taxcom-budat = ekko-bedat.
+  my_taxcom-waers = ekko-waers.
+  my_taxcom-kposn = ekpo-ebelp.
+  my_taxcom-mwskz = ekpo-mwskz.
+  my_taxcom-txjcd = ekpo-txjcd.
+  my_taxcom-shkzg = 'H'.
+  my_taxcom-xmwst = 'X'.
+  my_taxcom-wrbtr = ekpo-netwr.
+  my_taxcom-lifnr = ekko-lifnr.
+  my_taxcom-land1 = ekko-lands.
+  my_taxcom-ekorg = ekko-ekorg.
+  my_taxcom-hwaer = ekko-waers.
+  my_taxcom-llief = ekko-llief.
+  my_taxcom-bldat = ekko-bedat.
+  my_taxcom-matnr = ekpo-ematn.
+  my_taxcom-werks = ekpo-werks.
+  my_taxcom-bwtar = ekpo-bwtar.
+  my_taxcom-matkl = ekpo-matkl.
+  my_taxcom-meins = ekpo-meins.
+  my_taxcom-mglme = ekpo-menge.
+
+  IF my_taxcom-mglme EQ 0.
+    my_taxcom-mglme = 1000.
+  ENDIF.
+
+  my_taxcom-mtart = ekpo-mtart.
+
+
+*********
+  DATA:
+      wa_j_1b_taxcom TYPE j_1b_taxcom.
+
+
+  CLEAR wa_j_1b_taxcom.
+
+  SELECT SINGLE *
+    FROM lfa1
+    INTO @DATA(wa_lfa1)
+    WHERE lifnr = @ekko-lifnr.
+
+  IF sy-subrc EQ 0.
+    wa_j_1b_taxcom-txreg_sf = wa_lfa1-txjcd.
+    wa_j_1b_taxcom-taxbs    = wa_lfa1-taxbs.
+    wa_j_1b_taxcom-ipisp    = wa_lfa1-ipisp.
+    wa_j_1b_taxcom-brsch    = wa_lfa1-brsch.
+    wa_j_1b_taxcom-loc_pr   = wa_lfa1-txjcd.
+  ENDIF.
+
+  wa_j_1b_taxcom-txreg_st = ekpo-txjcd.
+  wa_j_1b_taxcom-mtuse    = ekpo-j_1bmatuse.
+  wa_j_1b_taxcom-mtorg    = ekpo-j_1bmatorg.
+  wa_j_1b_taxcom-ownpr    = ekpo-j_1bownpro.
+  wa_j_1b_taxcom-steuc    = ekpo-j_1bnbm.
+  wa_j_1b_taxcom-matkl    = ekpo-matkl.
+  wa_j_1b_taxcom-vrkme    = ekpo-meins.
+  wa_j_1b_taxcom-mgame    = ekpo-menge.
+
+  CALL FUNCTION 'J_1BSA_COMPONENT_ACTIVE'
+    EXPORTING
+      bukrs                = ekko-bukrs
+      component            = 'BR'
+    EXCEPTIONS
+      component_not_active = 02.
+
+  CALL FUNCTION 'J_1B_SAVE_TAX_FIELDS'
+    EXPORTING
+      i_taxcom = wa_j_1b_taxcom.
+
+  CALL FUNCTION 'J_1B_NF_PO_DISCOUNTS'
+    EXPORTING
+      i_kalsm = ekko-kalsm
+      i_ekpo  = ekpo
+    IMPORTING
+      e_ekpo  = ekpo
+    TABLES
+      i_konv  = tkomv.
+
+*--- SHIP FROM always from supplier -----
+  IF NOT ekko-llief IS INITIAL.
+    my_taxcom-lifnr = ekko-llief.
+  ENDIF.
+
+  PERFORM j_1b_save_tax_fields(saplmepo)
+       USING ekko
+             ekpo
+             wa_lfa1.
+
+  CALL FUNCTION 'CALCULATE_TAX_ITEM'
+    EXPORTING
+      i_taxcom         = my_taxcom
+    IMPORTING
+      e_taxcom         = my_taxcom
+    TABLES
+      t_xkomv             = tkomv
+    EXCEPTIONS
+      mwskz_not_defined   = 1
+      mwskz_not_found     = 2
+      mwskz_not_valid     = 3
+      steuerbetrag_falsch = 4
+      country_not_found   = 5
+      OTHERS              = 6.
+
+ENDFUNCTION.
