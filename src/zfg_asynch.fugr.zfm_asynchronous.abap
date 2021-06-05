@@ -6,7 +6,7 @@ FUNCTION zfm_asynchronous.
 *"     VALUE(IV_TIME) TYPE  I OPTIONAL
 *"     VALUE(IV_VALUE_A) TYPE  I OPTIONAL
 *"  EXPORTING
-*"     VALUE(EV_RESULT) TYPE  INT1
+*"     VALUE(EV_RESULT) TYPE  I
 *"----------------------------------------------------------------------
 
   WAIT UP TO iv_time SECONDS.

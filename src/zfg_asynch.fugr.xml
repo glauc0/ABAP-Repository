@@ -32,7 +32,7 @@
      <EXPORT>
       <RSEXP>
        <PARAMETER>EV_RESULT</PARAMETER>
-       <TYP>INT1</TYP>
+       <TYP>I</TYP>
       </RSEXP>
      </EXPORT>
      <DOCUMENTATION>
