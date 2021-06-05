@@ -51,18 +51,20 @@ END-OF-SELECTION.
 
 CLASS lcl_main IMPLEMENTATION.
   METHOD execute.
+    DATA lv_value_a TYPE i VALUE 1.
+    DATA lv_value_b TYPE i VALUE 2.
     DATA lv_time TYPE i VALUE 2.
 
     me->call_start_new_task(
       EXPORTING
         iv_destination = 'NONE'
         iv_time        = lv_time
-        iv_value_a     = 1
-        iv_value_b     = 2
+        iv_value_a     = lv_value_a
+        iv_value_b     = lv_value_b
         iv_task_name   = 'NEW_TASK'
     ).
 
-    WRITE: 'Waiting return Function...', /.
+    WRITE: 'Waiting for the function to return...', /.
     DATA(lv_seconds) = 0.
 
     DO lv_time TIMES.
@@ -73,8 +75,26 @@ CLASS lcl_main IMPLEMENTATION.
 
 
     WAIT UNTIL lcl_main=>gv_result NE 0.
-    WRITE: 'Return from Function...', /.
-    WRITE: gv_result.
+    WRITE: 'Return of function...', /.
+
+    DATA(lv_msg_str) = ``.
+    DATA(lv_value_a_str) = CONV string( lv_value_a ).
+    CONDENSE lv_value_a_str.
+    DATA(lv_value_b_str) = CONV string( lv_value_b ).
+    CONDENSE lv_value_b_str.
+    DATA(lv_result_str) = CONV string( gv_result ).
+    CONDENSE lv_result_str.
+
+    CONCATENATE: 'Result of sum'
+                 lv_value_a_str
+                 '+'
+                 lv_value_b_str
+                 'is'
+                 lv_result_str
+           INTO lv_msg_str
+           SEPARATED BY space.
+
+    WRITE: lv_msg_str.
   ENDMETHOD. "execute
 
   METHOD call_start_new_task.
