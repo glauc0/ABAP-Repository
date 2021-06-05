@@ -1,5 +1,5 @@
 * This program executes the following popup function modules, to help choosing the right one:
-* 
+*
 * POPUP_WITH_TABLE_DISPLAY
 * POPUP_TO_CONFIRM_STEP
 * POPUP_TO_DECIDE_WITH_MESSAGE
