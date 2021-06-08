@@ -1,4 +1,13 @@
-  METHOD if_ex_me_process_po_cust~process_item.
+" Implementar/criar as rotinas conforme exemplos abaixo
+
+TYPE-POOL Z001 . "Controle para ME21N - Emissor da fatura
+
+CONSTANTS:
+      z001_contador TYPE char21 VALUE 'ZME21N_EMISSOR_FATURA'.
+      
+
+METHOD if_ex_me_process_po_cust~process_item.
+    "TICKET (+) >>
     lo_header = im_item->get_header( ). " Se ja existir, é só aproveitar os objetos já criados
 
     ls_header = lo_header->get_data( ).
@@ -9,4 +18,129 @@
           ist_header = ls_header
       ).
     ENDIF.
+    "TICKET (+) <<
 ENDMETHOD.
+
+METHOD if_ex_me_process_po_cust~post.
+    "TICKET (+) >>
+    " Manter essa rotina sempre no final
+    IF im_ebeln IS NOT INITIAL.
+      zcl_emissor_fatura=>init( ).
+    ENDIF.
+    "TICKET (+) <<
+ENDMETHOD.
+
+Criar Enhancement Implicito no inicio da função e adaptar o código conforme a versão do SAP do cliente. Ou seja, copie o código da função que está no cliente e inclua a parte Z
+MODULO DE FUNÇÃO MM_FILL_EKKO_PARTNER_FIELDS
+
+ENHANCEMENT 1  ZENH_EMISSOR_FATURA.    "active version
+"TICKET (+) >>
+" O código Standard foi copiado para este Enhancement para conseguirmos manipular a rotina de exclusão do Emissor da Fatura somente para tipos de contratos especificos.
+" Visto que o cenário não é uma falha do produto SAP, sendo assim, nem adiantaria solicitar para o produto SAP criar um Enhancement Section
+
+  IF zcl_emissor_fatura=>validacao_z_ou_sap( iv_tcode = sy-tcode ) EQ 'Z'.
+    IF zcl_emissor_fatura=>get_contador( ) GT 0.
+      EXIT.
+    ENDIF.
+
+    zcl_emissor_fatura=>add_contador( ).
+
+* goods supplier (EKKO-LLIEF / partner function 'WL')
+  IF ekorg NE space.                                        "397979
+    i_ekorg = ekorg.                                        "397979
+  ENDIF.                                                    "397979
+  CLEAR H_TFILL.
+  CLEAR H_TABIX.
+  LOOP AT XMMPA WHERE PARVW = 'WL'.
+    ADD 1 TO H_TFILL.
+    IF H_TFILL EQ 1.
+      H_TABIX = SY-TABIX.
+    ENDIF.
+  ENDLOOP.
+  IF PARGR IS INITIAL.
+    SY-SUBRC = 0.
+  ELSE.
+    SELECT SINGLE * FROM  TPAER
+           WHERE  PARGR       = PARGR
+           AND    PARVW       = 'WL'           .
+  ENDIF.
+  IF SY-SUBRC = 0 AND H_TFILL <= 1.
+    IF H_TABIX NE 0.
+      READ TABLE XMMPA INDEX H_TABIX.
+      IF XMMPA-LTSNR IS INITIAL AND XMMPA-WERKS IS INITIAL.
+        IF LLIEF = SPACE.
+          DELETE XMMPA INDEX H_TABIX.
+        ELSE.
+          XMMPA-LIFN2 = LLIEF.
+          MODIFY XMMPA INDEX H_TABIX.
+        ENDIF.
+      ENDIF.
+    ELSE.
+      IF LLIEF NE SPACE.
+        CLEAR XMMPA.
+        XMMPA-MANDT = SY-MANDT.
+        XMMPA-EKORG = I_EKORG.
+        XMMPA-PARVW = 'WL'.
+        XMMPA-PARZA = '001'.
+        XMMPA-ERNAM = SY-UNAME.
+        XMMPA-ERDAT = SY-DATUM.
+        XMMPA-LIFN2 = LLIEF.
+        APPEND XMMPA.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+  
+* Comentar este trecho para quando for um fornecedor do tipo RS (Conversão para PT-BR é EF)
+*   invoice presented by (EKKO-LIFRE / partner function 'RS')
+*    CLEAR H_TFILL.
+*    CLEAR H_TABIX.
+*    LOOP AT XMMPA WHERE PARVW = 'RS'.
+*      ADD 1 TO H_TFILL.
+*      IF H_TFILL EQ 1.
+*        H_TABIX = SY-TABIX.
+*      ENDIF.
+*    ENDLOOP.
+    IF PARGR IS INITIAL.
+      SY-SUBRC = 0.
+    ELSE.
+      SELECT SINGLE * FROM  TPAER
+             WHERE  PARGR       = PARGR
+             AND    PARVW       = 'RS'           .
+    ENDIF.
+    IF SY-SUBRC = 0 AND H_TFILL <= 1.
+      IF H_TABIX NE 0.
+        READ TABLE XMMPA INDEX H_TABIX.
+        IF XMMPA-LTSNR IS INITIAL AND XMMPA-WERKS IS INITIAL.
+          IF LIFRE = SPACE.
+            DELETE XMMPA INDEX H_TABIX.
+          ELSE.
+            XMMPA-LIFN2 = LIFRE.
+            MODIFY XMMPA INDEX H_TABIX.
+          ENDIF.
+        ENDIF.
+      ELSE.
+*   blocked or deleted RS should not be taken
+        PERFORM is_vendor_blocked_or_deleted USING gmmpa-lifn2 "938652
+                                                   gmmpa-werks
+                                                   gmmpa-ekorg
+                                                   gmmpa-parvw
+                                                   i_bukrs
+                                          CHANGING lf_hit.
+        IF lifre NE space AND lf_hit IS initial.
+          CLEAR XMMPA.
+          XMMPA-MANDT = SY-MANDT.
+          XMMPA-EKORG = I_EKORG.
+          XMMPA-PARVW = 'RS'.
+          XMMPA-PARZA = '001'.
+          XMMPA-ERNAM = SY-UNAME.
+          XMMPA-ERDAT = SY-DATUM.
+          XMMPA-LIFN2 = LIFRE.
+          APPEND XMMPA.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+
+    EXIT. " Não executar rotina Standard
+  ENDIF.
+  "TICKET (+) <<
+ENDENHANCEMENT.
