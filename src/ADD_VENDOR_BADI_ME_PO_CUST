@@ -1,3 +1,6 @@
+" Solicitação: Na criação de pedidos de compras (ME21N), quando um pedido for
+" gerado para os tipos de contratos XPTO, levar o Emissor da fatura do contrato automaticamente para a aba de Parceiros.
+
 " Implementar/criar as rotinas conforme exemplos abaixo
 
 TYPE-POOL Z001 . "Controle para ME21N - Emissor da fatura
