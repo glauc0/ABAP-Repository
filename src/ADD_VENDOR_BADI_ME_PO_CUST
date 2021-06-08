@@ -1,0 +1,12 @@
+  METHOD if_ex_me_process_po_cust~process_item.
+    lo_header = im_item->get_header( ). " Se ja existir, é só aproveitar os objetos já criados
+
+    ls_header = lo_header->get_data( ).
+
+    IF zcl_emissor_fatura=>tcode_check( iv_tcode = sy-tcode ) EQ abap_true.
+      zcl_emissor_fatura=>adicionar_fornecedor(
+        EXPORTING
+          ist_header = ls_header
+      ).
+    ENDIF.
+ENDMETHOD.
