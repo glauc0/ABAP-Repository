@@ -1,0 +1,307 @@
+" Criar a classe e fazer a sua chamada conforme o arquivo ADD_VENDOR_BADI_ME_PO_CUST
+class ZCL_EMISSOR_FATURA definition
+  public
+  final
+  create public .
+
+public section.
+
+  class-methods INIT .
+  class-methods GET_CONTADOR
+    returning
+      value(RV_CONTADOR) type I .
+  class-methods TIPO_CONTRATO
+    returning
+      value(RV_OK) type CHAR1 .
+  class-methods ADD_CONTADOR .
+  class-methods VALIDACAO_Z_OU_SAP
+    importing
+      !IV_TCODE type SY-TCODE
+    returning
+      value(RV_Z_OU_SAP) type CHAR1 .
+  class-methods TCODE_CHECK
+    importing
+      !IV_TCODE type SY-TCODE
+    returning
+      value(RV_OK) type ABAP_BOOL .
+  class-methods ADICIONAR_FORNECEDOR
+    importing
+      !IST_HEADER type MEPOHEADER .
+  class-methods GET_TIPO_CONTRATO
+    importing
+      !IST_HEADER type MEPOHEADER .
+protected section.
+private section.
+
+  class-data GV_CONTADOR type I .
+  class-data GT_TIPO_CONTRATO type ZMM_TIPO_CONTRATO_TT .
+ENDCLASS.
+
+
+
+CLASS ZCL_EMISSOR_FATURA IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>ADD_CONTADOR
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD add_contador.
+    gv_contador = 1.
+
+    EXPORT gv_contador = gv_contador TO MEMORY ID z001_contador.
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>ADICIONAR_FORNECEDOR
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IST_HEADER                     TYPE        MEPOHEADER
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD adicionar_fornecedor.
+
+    DATA: lt_mmpa         TYPE mmpur_t_mmpa,
+          lt_ekpa         TYPE mmpur_t_ekpa,
+          lv_appli    TYPE char1 VALUE 'P',
+          lv_parvw_rs TYPE parvw VALUE 'RS', " Conversão é: Emissor da fatura
+          lv_flag     TYPE char1 VALUE 'X'.
+
+    CHECK ist_header-konnr IS NOT INITIAL.
+
+    " Ler fornecedores configurados
+    CALL FUNCTION 'MM_READ_PARTNERS'
+      EXPORTING
+        application = lv_appli
+      TABLES
+        x_ekpa      = lt_ekpa.
+
+    SELECT SINGLE pargr
+    FROM t161
+    INTO @DATA(lv_pargr)
+    WHERE bsart EQ @ist_header-bsart
+    AND   bstyp EQ @ist_header-bstyp.
+
+    CHECK lv_pargr IS NOT INITIAL.
+
+    " Verifica o tipo de contrato válido para a regra Z
+    zcl_emissor_fatura=>get_tipo_contrato( ist_header = ist_header ).
+
+    " Atributo estatico
+    READ TABLE gt_tipo_contrato INTO DATA(lst_tipo_contrato) INDEX 1.
+
+    CHECK sy-subrc EQ 0 AND
+          lst_tipo_contrato-lifre IS NOT INITIAL AND
+          get_contador( ) EQ 0.
+
+* Verificar se a linha referente ao Emissor da Fatura já existe
+    READ TABLE lt_ekpa INTO DATA(lst_ekpa_temp) WITH KEY  parvw = lv_parvw_rs
+                                                          lifn2 = lst_tipo_contrato-lifre.
+
+    IF sy-subrc IS NOT INITIAL.
+
+      LOOP AT lt_ekpa INTO DATA(gs_ekpa).
+
+        DATA(gs_mmpa) = conv mmpa( ' ' ).
+
+        MOVE-CORRESPONDING gs_ekpa TO gs_mmpa.
+
+*     Adiciona todas as linhas que já foram recuperadas automaticamente na tabela LT_MMPA[]
+        APPEND gs_mmpa TO lt_mmpa.
+
+        DATA(lv_atlast_event) = ' '.
+
+        AT LAST.
+
+          lv_atlast_event = lv_flag.
+
+        ENDAT.
+
+        IF lv_atlast_event EQ lv_flag.
+
+          MOVE-CORRESPONDING gs_ekpa TO gs_mmpa.
+
+          gs_mmpa-parvw = lv_parvw_rs. " Função Parceiro em seu valor interno SAP
+
+          gs_mmpa-lifn2 = lst_tipo_contrato-lifre.
+
+          CLEAR lst_ekpa_temp.
+          READ TABLE lt_ekpa INTO lst_ekpa_temp WITH KEY  parvw = lv_parvw_rs
+                                                          lifn2 = gs_ekpa-lifn2.
+
+          IF sy-subrc IS NOT INITIAL.
+
+            APPEND gs_mmpa TO lt_mmpa.
+
+          ENDIF.
+
+        ENDIF.
+
+        CLEAR gs_ekpa.
+
+      ENDLOOP.
+
+      IF lt_mmpa[] IS NOT INITIAL.
+
+*        zcl_emissor_fatura=>add_contador( ). " Contator será verificado no Enhancement criado na função MM_FILL_EKKO_PARTNER_FIELDS
+
+*     Atualizar aba de parceiros
+        CALL FUNCTION 'MM_MAINTAIN_PARTNERS'
+          EXPORTING
+            application      = lv_appli
+            ebeln            = ist_header-ebeln
+            bstyp            = ist_header-bstyp
+            ekorg            = ist_header-ekorg
+            lifnr            = ist_header-lifnr
+            pargr            = lv_pargr
+            screen_invisible = lv_flag
+          TABLES
+            x_mmpa           = lt_mmpa.
+
+      ENDIF.
+
+    ENDIF.
+
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>GET_CONTADOR
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RV_CONTADOR                    TYPE        I
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD get_contador.
+
+    IMPORT gv_contador = gv_contador FROM MEMORY ID z001_contador.
+
+    rv_contador = gv_contador.
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>GET_TIPO_CONTRATO
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IST_HEADER                     TYPE        MEPOHEADER
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD get_tipo_contrato.
+
+    SELECT name,
+           type,
+           numb,
+           sign,
+           opti,
+           low,
+           high
+      INTO TABLE @DATA(lt_tipos_contratos)
+      FROM tvarvc
+     WHERE name EQ 'ZCL_EMISSOR_FATURA-BSART'
+       AND type EQ 'S'.
+
+    DATA: lrg_bsart TYPE RANGE OF esart.
+    DATA(lv_from) = 1.
+    DATA(lv_limit) = 1500. " Tamanho maximo que o range suporta (dependendendo da versão do SAP)
+    DATA(lt_table_aux) = lt_tipos_contratos.
+    SORT lt_table_aux BY low.
+    DELETE ADJACENT DUPLICATES FROM lt_table_aux COMPARING low.
+
+    WHILE lt_table_aux IS NOT INITIAL.
+      lrg_bsart = VALUE #( BASE lrg_bsart FOR lst IN lt_table_aux
+                           FROM lv_from TO lv_limit
+                           ( sign = lst-sign option = lst-opti low = lst-low )
+                           ).
+
+      SELECT ebeln,
+             lifre
+        INTO TABLE @gt_tipo_contrato "Atributo estatico
+        FROM ekko
+       WHERE ebeln EQ @ist_header-konnr
+         AND bsart IN @lrg_bsart.
+
+      CLEAR: lrg_bsart.
+
+      DELETE lt_table_aux FROM lv_from TO lv_limit.
+
+    ENDWHILE.
+
+    DELETE gt_tipo_contrato WHERE lifre IS INITIAL.
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>INIT
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD init.
+    CLEAR: gt_tipo_contrato,
+           gv_contador.
+
+    EXPORT gv_contador = gv_contador TO MEMORY ID z001_contador.
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>TCODE_CHECK
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_TCODE                       TYPE        SY-TCODE
+* | [<-()] RV_OK                          TYPE        ABAP_BOOL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD tcode_check.
+
+    rv_ok = abap_false.
+
+    SELECT name,
+           type,
+           numb,
+           sign,
+           opti,
+           low,
+           high
+      INTO TABLE @DATA(lt_tvarvc)
+      FROM tvarvc
+     WHERE name EQ 'ZCL_EMISSOR_FATURA-TCODE'
+       AND type EQ 'S'.
+
+    IF sy-subrc EQ 0.
+      LOOP AT lt_tvarvc INTO DATA(lst_tvarvc).
+        SPLIT lst_tvarvc-name AT '-' INTO DATA(lv_prefixo)
+                                          DATA(lv_sufixo).
+        CASE lv_sufixo.
+          WHEN 'TCODE'.
+            IF lst_tvarvc-low EQ iv_tcode.
+              rv_ok = abap_true.
+              EXIT.
+            ENDIF.
+
+          WHEN OTHERS.
+        ENDCASE.
+      ENDLOOP.
+    ENDIF.
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>TIPO_CONTRATO
+* +-------------------------------------------------------------------------------------------------+
+* | [<-()] RV_OK                          TYPE        CHAR1
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD tipo_contrato.
+    IF zcl_emissor_fatura=>gt_tipo_contrato IS NOT INITIAL.
+      rv_ok = abap_true.
+    ENDIF.
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Static Public Method ZCL_EMISSOR_FATURA=>VALIDACAO_Z_OU_SAP
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_TCODE                       TYPE        SY-TCODE
+* | [<-()] RV_Z_OU_SAP                    TYPE        CHAR1
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD VALIDACAO_Z_OU_SAP.
+    IF zcl_emissor_fatura=>tcode_check( iv_tcode = iv_tcode ) EQ abap_true AND
+       zcl_emissor_fatura=>tipo_contrato( ) EQ abap_true.
+
+      rv_z_ou_sap = 'Z'.
+
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
