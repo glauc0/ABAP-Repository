@@ -33,23 +33,23 @@ CLASS zcl_excel_uploader_600 DEFINITION
       CHANGING
         !ct_data TYPE ANY TABLE .
   PROTECTED SECTION.
-  PRIVATE SECTION.
+private section.
 
-    DATA gv_tot_components TYPE int4 .
+  data GV_TOT_COMPONENTS type INT4 .
 
-    METHODS do_upload
-      IMPORTING
-        !iv_begin TYPE int4
-        !iv_end   TYPE int4
-      EXPORTING
-        !rv_empty TYPE flag
-      CHANGING
-        !ct_data  TYPE STANDARD TABLE .
-    METHODS date_convert
-      IMPORTING
-        !iv_date_string TYPE string
-      CHANGING
-        !cv_date        TYPE datum .
+  methods DO_UPLOAD
+    importing
+      !IV_BEGIN type I
+      !IV_END type I
+    exporting
+      !RV_EMPTY type FLAG
+    changing
+      !CT_DATA type STANDARD TABLE .
+  methods DATE_CONVERT
+    importing
+      !IV_DATE_STRING type STRING
+    changing
+      !CV_DATE type DATUM .
 ENDCLASS.
 
 
@@ -126,7 +126,8 @@ CLASS ZCL_EXCEL_UPLOADER_600 IMPLEMENTATION.
           lv_packet            TYPE i,
           lv_numberofcolumns   TYPE i,
           lv_date_string       TYPE string,
-          lv_target_date_field TYPE datum.
+          lv_target_date_field TYPE datum,
+          lv_funcname          TYPE rs38l-name.
 
     FIELD-SYMBOLS: <struc>           TYPE any,
                    <field>           TYPE any,
@@ -134,10 +135,29 @@ CLASS ZCL_EXCEL_UPLOADER_600 IMPLEMENTATION.
                    <lv_field>        TYPE any,
                    <lfs_field_saida> TYPE any.
 
-*   Upload this packet
-    CALL FUNCTION 'ALSM_EXCEL_TO_INTERNAL_TABLE'
+    lv_funcname = 'ALSM_EXCEL_TO_INTERNAL_TABLE'.
+
+    CALL FUNCTION 'FUNCTION_EXISTS'
       EXPORTING
-        gv_filename             = gv_filename
+        funcname           = lv_funcname
+*     IMPORTING
+*       GROUP              =
+*       INCLUDE            =
+*       NAMESPACE          =
+*       STR_AREA           =
+      EXCEPTIONS
+        function_not_exist = 1
+        OTHERS             = 2.
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+      lv_funcname = 'ZALSM_EXCEL_TO_INTERNAL_TABLE'.
+    ENDIF.
+
+
+*   Upload this packet
+    CALL FUNCTION lv_funcname
+      EXPORTING
+        filename             = gv_filename
         i_begin_col             = 1
         i_begin_row             = iv_begin
         i_end_col               = gv_tot_components
