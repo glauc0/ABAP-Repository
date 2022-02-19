@@ -14,6 +14,20 @@ PARAMETERS p_so10 TYPE tdobname DEFAULT 'ZEMAIL_TESTE'.
 CREATE OBJECT lo_email.
 
 lo_email->set_subject( iv_email_subject =  'Teste' ).
+lo_email->set_attach_name( iv_attach_subject =  'Arquivo.csv' ).
+
+DATA: lt_replace_text  TYPE zreplace_text_tt,
+      lst_replace_text LIKE LINE OF lt_replace_text.
+
+lst_replace_text-target = '<sy-uname>'.
+lst_replace_text-value = sy-uname.
+APPEND lst_replace_text TO lt_replace_text.
+CLEAR: lst_replace_text.
+
+lst_replace_text-target = '<sy-datum>'.
+lst_replace_text-value = sy-datum.
+APPEND lst_replace_text TO lt_replace_text.
+CLEAR: lst_replace_text.
 
 lo_email->get_read_text(
   EXPORTING
@@ -21,6 +35,7 @@ lo_email->get_read_text(
     iv_language = sy-langu                 " Language Key
     iv_object   = 'TEXT'                 " Texts: application object
     iv_id   = 'ST'                 " Texts: application object
+    it_replace_text = lt_replace_text
   EXCEPTIONS
     OTHERS = 99
 ).
@@ -28,33 +43,19 @@ lo_email->get_read_text(
 IF sy-subrc <> 0.
   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
     WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-ELSE.
-  DATA(lv_value) = CONV string( sy-uname ).
-  lo_email->replace_texts(
-    EXPORTING
-      iv_target = '<sy-uname>'
-      iv_value  = lv_value
-  ).
-
-  lv_value = CONV string( sy-datum ).
-  lo_email->replace_texts(
-    EXPORTING
-      iv_target = '<sy-datum>'
-      iv_value  = lv_value
-  ).
 ENDIF.
 
 lo_email->set_body( ).
 
 DATA: lst_text LIKE LINE OF lt_text.
 
-lst_text = `Name;LastName`.
+lst_text = `Name,LastName`.
 APPEND lst_text TO lt_text.
 
-lst_text = `Glauco;Silva`.
+lst_text = `Glauco,Silva`.
 APPEND lst_text TO lt_text.
 
-lst_text = `Natalia;Valenzuela`.
+lst_text = `Natalia,Valenzuela`.
 APPEND lst_text TO lt_text.
 
 lo_email->convert_data_to_csv(
@@ -66,8 +67,8 @@ lo_email->convert_data_to_csv(
     OTHERS          = 3
 ).
 IF sy-subrc <> 0.
-* MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
-*   WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
+    WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
 ENDIF.
 
 DATA: lt_receipient  TYPE zuiys_iusr_tt,
@@ -100,7 +101,7 @@ IF sy-subrc <> 0.
   MESSAGE ID sy-msgid TYPE sy-msgty NUMBER sy-msgno
     WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
 ENDIF.
-*
+**
 *  TYPES BEGIN OF ty_gs_data_key.
 *  TYPES   name  TYPE string.
 *  TYPES   value TYPE string.

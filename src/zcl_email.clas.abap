@@ -16,7 +16,7 @@ public section.
   data R_DOCUMENT type ref to CL_DOCUMENT_BCS .
   data R_RECIPENT type ref to IF_RECIPIENT_BCS .
   data C_ATTACH_TYPE_TXT type SO_OBJ_TP value 'txt' ##NO_TEXT.
-  data C_ATTACH_SUBJECT type SO_OBJ_DES value 'Text_attach' ##NO_TEXT.
+  data V_ATTACH_SUBJECT type SO_OBJ_DES .
   data T_MESSAGE type SOLI_TAB .
   data C_ATTACH_TYPE_CSV type SO_OBJ_TP value 'csv' ##NO_TEXT.
 
@@ -26,16 +26,13 @@ public section.
   methods SET_TEXT
     importing
       value(LT_TEXT) type STANDARD TABLE .
-  methods REPLACE_TEXTS
-    importing
-      !IV_TARGET type STRING
-      !IV_VALUE type STRING .
   methods GET_READ_TEXT
     importing
       !IV_NAME type THEAD-TDNAME
       !IV_LANGUAGE type THEAD-TDSPRAS
       !IV_OBJECT type THEAD-TDOBJECT
       !IV_ID type THEAD-TDID
+      !IT_REPLACE_TEXT type ZREPLACE_TEXT_TT optional
     exceptions
       ERROR .
   methods SET_BODY .
@@ -60,8 +57,16 @@ public section.
     exceptions
       EX_DOCUMENT_BCS
       EX_SEND_REQ_BCS .
+  methods SET_ATTACH_NAME
+    importing
+      !IV_ATTACH_SUBJECT type SO_OBJ_DES .
 protected section.
 private section.
+
+  methods REPLACE_TEXTS
+    importing
+      !IV_TARGET type CHAR255
+      !IV_VALUE type CHAR255 .
 ENDCLASS.
 
 
@@ -141,7 +146,7 @@ CLASS ZCL_EMAIL IMPLEMENTATION.
           me->r_document->add_attachment(
             EXPORTING
               i_attachment_type     = me->c_attach_type_txt " Document Class for Attachment
-              i_attachment_subject  = me->c_attach_subject " Attachment Title
+              i_attachment_subject  = me->v_attach_subject " Attachment Title
               i_attachment_size     = me->v_attach_size " Size of Document Content
 *          i_attachment_language = space            " Language in Which Attachment Is Created
 *          i_att_content_text    =                  " Content (Text-Like)
@@ -211,7 +216,7 @@ CLASS ZCL_EMAIL IMPLEMENTATION.
             cl_bcs_convert=>string_to_solix(
               EXPORTING
                 iv_string   = lv_string
-*                iv_codepage = '4103'  "suitable for MS Excel, leave empty
+                iv_codepage = '4110' " UTF-8
                 iv_add_bom  = 'X'     "for other doc types
               IMPORTING
                 et_solix  = me->t_attach_content_solix
@@ -229,7 +234,7 @@ CLASS ZCL_EMAIL IMPLEMENTATION.
           me->r_document->add_attachment(
             EXPORTING
               i_attachment_type     = me->c_attach_type_csv " Document Class for Attachment
-              i_attachment_subject  = me->c_attach_subject " Attachment Title
+              i_attachment_subject  = me->v_attach_subject " Attachment Title
               i_attachment_size     = me->v_attach_size " Size of Document Content
 *          i_attachment_language = space            " Language in Which Attachment Is Created
 *          i_att_content_text    =                  " Content (Text-Like)
@@ -330,6 +335,16 @@ CLASS ZCL_EMAIL IMPLEMENTATION.
         APPEND lst_message TO me->t_message.
         CLEAR: lst_message.
       ENDLOOP.
+
+      IF it_replace_text IS SUPPLIED.
+        LOOP AT it_replace_text INTO DATA(lst_replace_text).
+          me->replace_texts(
+            EXPORTING
+              iv_target = lst_replace_text-target
+              iv_value  = lst_replace_text-value
+          ).
+        ENDLOOP.
+      ENDIF.
     ENDIF.
 
   ENDMETHOD.
@@ -337,11 +352,18 @@ CLASS ZCL_EMAIL IMPLEMENTATION.
 
   METHOD replace_texts.
     LOOP AT me->t_message ASSIGNING FIELD-SYMBOL(<lfs_message>).
-      IF <lfs_message> CA iv_target.
+      IF <lfs_message> CS iv_target.
         REPLACE ALL OCCURRENCES OF iv_target IN <lfs_message> WITH iv_value.
       ENDIF.
     ENDLOOP.
   ENDMETHOD.
+
+
+  method SET_ATTACH_NAME.
+    CHECK iv_attach_subject IS NOT INITIAL.
+
+    v_attach_subject = iv_attach_subject.
+  endmethod.
 
 
   METHOD set_body.
