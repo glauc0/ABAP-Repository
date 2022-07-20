@@ -233,7 +233,8 @@ CLASS ZCL_EMAIL IMPLEMENTATION.
 
           me->r_document->add_attachment(
             EXPORTING
-              i_attachment_type     = me->c_attach_type_csv " Document Class for Attachment
+*              i_attachment_type     = me->c_attach_type_csv " Document Class for Attachment
+              i_attachment_type     = me->c_attach_type_txt " Document Class for Attachment
               i_attachment_subject  = me->v_attach_subject " Attachment Title
               i_attachment_size     = me->v_attach_size " Size of Document Content
 *          i_attachment_language = space            " Language in Which Attachment Is Created

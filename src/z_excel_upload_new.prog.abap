@@ -256,6 +256,7 @@ FORM date_convert USING iv_date_string TYPE string CHANGING cv_date TYPE datum .
 
   DATA: lv_convert_date(10) TYPE c.
 
+  "The field in the excel file must be in some date format (mm/dd/yyyy or mm-dd-yyyy or any other formats)
   lv_convert_date = iv_date_string .
 
   "date format YYYY/MM/DD
@@ -276,9 +277,9 @@ FORM date_convert USING iv_date_string TYPE string CHANGING cv_date TYPE datum .
         OTHERS              = 4.
   ELSE.
 
-    " date format DD/MM/YYYY
     FIND REGEX '^\d{1,2}[/|-]\d{1,2}[/|-]\d{4}$' IN lv_convert_date.
     IF sy-subrc = 0.
+      " date format DD/MM/YYYY
       CALL FUNCTION '/SAPDMC/LSM_DATE_CONVERT'
         EXPORTING
           date_in             = lv_convert_date
@@ -292,6 +293,23 @@ FORM date_convert USING iv_date_string TYPE string CHANGING cv_date TYPE datum .
           illegal_date_format = 2
           no_user_date_format = 3
           OTHERS              = 4.
+
+      IF sy-subrc <> 0.
+        " date format MM/DD/YYYY
+        CALL FUNCTION '/SAPDMC/LSM_DATE_CONVERT'
+          EXPORTING
+            date_in             = lv_convert_date
+            date_format_in      = 'MDDY'
+            to_output_format    = ' '
+            to_internal_format  = 'X'
+          IMPORTING
+            date_out            = lv_convert_date
+          EXCEPTIONS
+            illegal_date        = 1
+            illegal_date_format = 2
+            no_user_date_format = 3
+            OTHERS              = 4.
+      ENDIF.
     ENDIF.
 
   ENDIF.
