@@ -13,7 +13,7 @@ public section.
       !IT_RETURN type BAPIRET2_T .
   methods SLG1_VIEW
     importing
-      !I_EXTNUMBER type STRING
+      !I_EXTNUMBER type BALNREXT
       !I_OBJECT type BALHDR-OBJECT
       !I_SUB_OBJECT type BALHDR-SUBOBJECT
       !I_CPROG type SY-CPROG optional
