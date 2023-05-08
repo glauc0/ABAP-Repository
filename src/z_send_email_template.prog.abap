@@ -49,13 +49,13 @@ lo_email->set_body( ).
 
 DATA: lst_text LIKE LINE OF lt_text.
 
-lst_text = `Name,LastName`.
+lst_text = `FirstName1,LastName1`.
 APPEND lst_text TO lt_text.
 
-lst_text = `Glauco,Silva`.
+lst_text = `FirstName2,LastName2`.
 APPEND lst_text TO lt_text.
 
-lst_text = `Natalia,Valenzuela`.
+lst_text = `FirstName3,LastName3`.
 APPEND lst_text TO lt_text.
 
 lo_email->convert_data_to_csv(
@@ -74,10 +74,10 @@ ENDIF.
 DATA: lt_receipient  TYPE zuiys_iusr_tt,
       lst_receipient LIKE LINE OF lt_receipient.
 
-lst_receipient-email = 'glauco.ernesto@gmail.com'.
+lst_receipient-email = 'email1@email1.com'.
 APPEND lst_receipient TO lt_receipient.
 
-lst_receipient-email = 'glauco.silva@gmail.com'.
+lst_receipient-email = 'email2@email2.com'.
 APPEND lst_receipient TO lt_receipient.
 
 lo_email->add_recipient(
