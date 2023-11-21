@@ -1,0 +1,56 @@
+Use case:
+During a development for a customer running SAP ECC 5.0, the break points did not work. Then, the solution to get the break sessions was adding this code in the custom objects.
+However, we can use the idea removing the Terminal validation, once the terminal name is empty in Background processes.
+
+Description:
+Break point
+
+Attributes:
+GT_BREAK_SESSIONS|Static Attribute|Private|Type|ZTVARVC_TAB|Table type for TVARVC --> **Create a custom table type if you do not have a table type for TVARVC table in your system
+
+Parameters:
+Importing :	IV_NAME	TYPE TVARVC-NAME	ABAP: Name of Variant Variable
+Returning@	VALUE( RV_BREAK )	TYPE ABAP_BOOL	
+
+
+
+
+METHOD check_break_point.
+  DATA lst_break_session LIKE LINE OF gt_break_sessions.
+
+  READ TABLE gt_break_sessions INTO lst_break_session WITH KEY name = iv_name.
+
+  IF sy-subrc <> 0.
+    SELECT *
+      INTO CORRESPONDING FIELDS OF TABLE gt_break_sessions
+      FROM tvarvc
+     WHERE name = iv_name
+       AND type = 'P'.
+
+    CLEAR: lst_break_session.
+    READ TABLE gt_break_sessions INTO lst_break_session WITH KEY name = iv_name.
+  ENDIF.
+
+  DATA lv_terminal TYPE char50.
+  CALL FUNCTION 'TH_USER_INFO' " Run this Function Module to know your terminal name and add it to the corresponding STVARV entry. Only one terminal at time.
+    IMPORTING
+      terminal = lv_terminal.
+
+  TRANSLATE lv_terminal TO UPPER CASE.
+  CONDENSE lv_terminal.
+
+  TRANSLATE lst_break_session-low TO UPPER CASE.
+  CONDENSE lst_break_session-low.
+
+  IF lst_break_session-low IS NOT INITIAL AND
+     lst_break_session-low = lv_terminal.
+    rv_break = abap_true.
+  ELSE.
+    rv_break = abap_false.
+  ENDIF.
+ENDMETHOD.
+
+** How to use it
+IF zcl_bc_break_point=>check_break_point( 'INCLUDE_NAME_OR_PROCESS_NAME_YOU_ARE_WORKING_ON' ) = abap_true.
+  BREAK-POINT. " When background process, the terminal name is empty. Then no background process will be impacted
+ENDIF.
