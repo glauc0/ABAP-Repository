@@ -150,7 +150,7 @@ CLASS ZCL_EXCEL_UPLOADER_600 IMPLEMENTATION.
         OTHERS             = 2.
     IF sy-subrc <> 0.
 * Implement suitable error handling here
-      lv_funcname = 'ZALSM_EXCEL_TO_INTERNAL_TABLE'.
+      lv_funcname = 'ZALSM_EXCEL_TO_INTERNAL_TABLE'. " Create the FM. All code is attached in this folder
     ENDIF.
 
 
